@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bar伝票アプリ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at 30% 10%, #0a0f24, #000);
+      color: #e0e0ff;
+      font-family: "Noto Sans JP", sans-serif;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(0, 255, 246, 0.1);
+      box-shadow: 0 0 15px rgba(0, 255, 246, 0.1);
+    }
+    .btn {
+      width: 2.8rem;
+      height: 2.8rem;
+      font-size: 1.4rem;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .neon-title {
+      background: linear-gradient(90deg, #ff2fd0, #00bfff);
+      -webkit-background-clip: text;
+      color: transparent;
+      font-weight: 800;
+      text-shadow: 0 0 12px rgba(255, 47, 208, 0.4);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
+
+  <div class="w-full max-w-md glass rounded-2xl shadow-xl p-4 space-y-4">
+
+    <h1 class="text-3xl font-bold text-center neon-title mb-2">Bar伝票</h1>
+
+    <!-- チャージ設定 -->
+    <div class="border border-cyan-500/40 rounded-lg p-3">
+      <h2 class="font-semibold text-lg text-cyan-300 mb-2">チャージ設定</h2>
+      <div class="flex justify-between items-center mb-2">
+        <label class="text-sm">チャージ金額（40分）</label>
+        <input id="chargeBase" type="number" value="3000"
+          class="w-24 text-right border border-cyan-600 rounded bg-black text-cyan-100 p-1" />
+      </div>
+      <div class="flex justify-between items-center mb-2">
+        <label class="text-sm">開始時間</label>
+        <input id="startTime" type="time"
+          class="w-32 border border-cyan-600 rounded bg-black text-cyan-100 p-1" />
+      </div>
+      <div class="flex justify-between items-center">
+        <label class="text-sm">終了時間</label>
+        <input id="endTime" type="time"
+          class="w-32 border border-cyan-600 rounded bg-black text-cyan-100 p-1" />
+      </div>
+    </div>
+
+    <!-- 商品リスト -->
+    <div>
+      <h2 class="font-semibold text-lg text-cyan-300 mb-2">注文入力</h2>
+      <div id="menuContainer" class="space-y-3"></div>
+    </div>
+
+    <!-- 明細 -->
+    <div class="border border-cyan-600/60 rounded-lg p-3 bg-black/50">
+      <h2 class="font-semibold text-lg text-cyan-300 mb-2">明細</h2>
+      <div id="summary" class="text-sm text-cyan-100 max-h-48 overflow-y-auto">
+        まだ入力がありません
+      </div>
+    </div>
+
+    <!-- CSV出力 -->
+    <div class="border-t border-cyan-700 pt-4">
+      <label class="block text-sm mb-1 text-cyan-200">ファイル名（任意）</label>
+      <input id="fileName" type="text" placeholder="例: table1"
+        class="border border-cyan-600 rounded bg-black text-cyan-100 p-2 w-full mb-3" />
+      <button id="downloadCsv"
+        class="bg-gradient-to-r from-pink-500 to-blue-500 hover:opacity-90 text-white font-semibold px-4 py-3 rounded-lg w-full shadow-lg shadow-pink-500/20">
+        💾 データを保存
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const TAX_RATE = 0.2; // 20%
+    const menuData = {
+      "エンタメメニュー": [
+        { name: "キャストドリンク", price: 1000 },
+        { name: "キャストドリンクL", price: 2000 },
+        { name: "チェキ", price: 1000 },
+        { name: "チェキ（メッセージ付き）", price: 1500 },
+        { name: "eスポーツワンプレイ", price: 500 },
+        { name: "キャストeスポーツプレイ", price: 1000 },
+        { name: "ガチャポンコイン", price: 1000 },
+        { name: "オリジナルカクテル", price: 1500 },
+      ],
+      "フード": [
+        { name: "おまかせお菓子盛り合わせ", price: 500 },
+        { name: "ミックスナッツ", price: 500 },
+        { name: "柿ピー", price: 500 },
+        { name: "チキンナゲット", price: 800 },
+        { name: "唐揚げ", price: 1000 },
+        { name: "じゃがバター", price: 1000 },
+      ],
+      "シャンパン": [
+        { name: "バニラアイス", price: 600 },
+        { name: "ガトーショコラ", price: 900 },
+      ]
+    };
+
+    const menuContainer = document.getElementById("menuContainer");
+    const summaryDiv = document.getElementById("summary");
+
+    // メニュー生成
+    Object.entries(menuData).forEach(([category, items]) => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "border border-cyan-700/60 rounded-lg overflow-hidden";
+
+      const header = document.createElement("button");
+      header.className = "w-full text-left font-semibold bg-cyan-900/30 px-3 py-2";
+      header.textContent = category;
+
+      const content = document.createElement("div");
+      content.className = "hidden flex flex-col space-y-2 p-2";
+
+      items.forEach((item, idx) => {
+        const row = document.createElement("div");
+        row.className = "flex justify-between items-center border-b border-cyan-800 pb-1";
+
+        row.innerHTML = `
+          <span>${item.name} <span class="text-cyan-400">(${item.price}円)</span></span>
+          <div class="flex items-center space-x-2">
+            <button class="minus btn bg-pink-600 hover:bg-pink-500 text-white">−</button>
+            <input id="qty-${category}-${idx}" type="text" value="0"
+              class="w-12 text-center border border-cyan-700 bg-black text-cyan-100 rounded" readonly />
+            <button class="plus btn bg-blue-600 hover:bg-blue-500 text-white">＋</button>
+          </div>
+        `;
+        content.appendChild(row);
+      });
+
+      header.addEventListener("click", () => content.classList.toggle("hidden"));
+      wrapper.appendChild(header);
+      wrapper.appendChild(content);
+      menuContainer.appendChild(wrapper);
+    });
+
+    // プラスマイナス操作
+    menuContainer.addEventListener("click", (e) => {
+      if (e.target.classList.contains("plus") || e.target.classList.contains("minus")) {
+        const input = e.target.parentElement.querySelector("input");
+        let value = parseInt(input.value);
+        if (e.target.classList.contains("plus") && value < 99) value++;
+        if (e.target.classList.contains("minus") && value > 0) value--;
+        input.value = value;
+        updateSummary();
+      }
+    });
+
+    function updateSummary() {
+      const rows = [];
+      let subtotal = 0;
+
+      for (const [category, items] of Object.entries(menuData)) {
+        items.forEach((item, idx) => {
+          const qty = parseInt(document.getElementById(`qty-${category}-${idx}`).value);
+          if (qty > 0) {
+            const lineTotal = qty * item.price;
+            subtotal += lineTotal;
+            rows.push(`${item.name} × ${qty} = ${lineTotal}円`);
+          }
+        });
+      }
+
+      // チャージ料計算
+      const base = parseInt(document.getElementById("chargeBase").value || 3000);
+      const start = document.getElementById("startTime").value;
+      const end = document.getElementById("endTime").value;
+      if (start && end) {
+        const [sh, sm] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+        let minutes = (eh * 60 + em) - (sh * 60 + sm);
+        if (minutes < 0) minutes += 24 * 60;
+        const sets = Math.ceil(minutes / 40);
+        const chargeTotal = sets * base;
+        subtotal += chargeTotal;
+        rows.push(`チャージ料 ${base}円 × ${sets}セット = ${chargeTotal}円`);
+      }
+
+      const tax = Math.round(subtotal * TAX_RATE);
+      const total = subtotal + tax;
+
+      rows.push(`<div class="border-t border-cyan-700 mt-1 pt-1 text-cyan-200">小計: ${subtotal}円</div>`);
+      rows.push(`<div class="text-cyan-300">tax（消費税・サービス料 20%）: ${tax}円</div>`);
+      rows.push(`<div class="font-bold text-lg text-pink-400 mt-1">合計: ${total}円</div>`);
+
+      summaryDiv.innerHTML = rows.length ? rows.join("<br>") : "まだ入力がありません";
+    }
+
+    document.querySelectorAll("input").forEach(i => i.addEventListener("input", updateSummary));
+
+    // CSV出力機能
+    document.getElementById("downloadCsv").addEventListener("click", () => {
+      const rows = [["品名", "単価", "数量", "小計"]];
+      let subtotal = 0;
+
+      for (const [category, items] of Object.entries(menuData)) {
+        items.forEach((item, idx) => {
+          const qty = parseInt(document.getElementById(`qty-${category}-${idx}`).value);
+          if (qty > 0) {
+            const lineTotal = qty * item.price;
+            subtotal += lineTotal;
+            rows.push([item.name, item.price, qty, lineTotal]);
+          }
+        });
+      }
+
+      const base = parseInt(document.getElementById("chargeBase").value || 3000);
+      const start = document.getElementById("startTime").value;
+      const end = document.getElementById("endTime").value;
+      if (start && end) {
+        const [sh, sm] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+        let minutes = (eh * 60 + em) - (sh * 60 + sm);
+        if (minutes < 0) minutes += 24 * 60;
+        const sets = Math.ceil(minutes / 40);
+        const chargeTotal = sets * base;
+        subtotal += chargeTotal;
+        rows.push(["チャージ料", base, sets, chargeTotal]);
+      }
+
+      const tax = Math.round(subtotal * TAX_RATE);
+      const total = subtotal + tax;
+      rows.push(["小計", "", "", subtotal]);
+      rows.push(["tax（消費税・サービス料20%）", "", "", tax]);
+      rows.push(["合計", "", "", total]);
+
+      const csvContent = rows.map(r => r.join(",")).join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const baseName = document.getElementById("fileName").value.trim() || "denpyo";
+      const now = new Date();
+      const yy = String(now.getFullYear()).slice(-2);
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const filename = `${yy}${mm}${dd}_${baseName}.csv`;
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
