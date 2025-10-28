@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bar伝票アプリ</title>
+  <title>伝票計算ツール</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -39,7 +39,7 @@
 
   <div class="w-full max-w-md glass rounded-2xl shadow-xl p-4 space-y-4">
 
-    <h1 class="text-3xl font-bold text-center neon-title mb-2">Bar伝票</h1>
+    <h1 class="text-3xl font-bold text-center neon-title mb-2">伝票計算ツール</h1>
 
     <!-- チャージ設定 -->
     <div class="border border-cyan-500/40 rounded-lg p-3">
@@ -99,6 +99,7 @@
         { name: "キャストeスポーツプレイ", price: 1000 },
         { name: "ガチャポンコイン", price: 1000 },
         { name: "オリジナルカクテル", price: 1500 },
+        { name: "チンチロ", price: 1000 },
       ],
       "フード": [
         { name: "おまかせお菓子盛り合わせ", price: 500 },
@@ -107,10 +108,57 @@
         { name: "チキンナゲット", price: 800 },
         { name: "唐揚げ", price: 1000 },
         { name: "じゃがバター", price: 1000 },
+        { name: "焼きおにぎり", price: 1000 },
+        { name: "肉巻きおにぎり", price: 1200 },
+        { name: "フライドポテト", price: 1000 },
+        { name: "フライドポテト（ﾄﾘｭﾌ/ﾁｪﾀﾞｰﾁｰｽﾞ）", price: 1200 },
+        { name: "鳥のしそチーズ", price: 1000 },
+        { name: "ソーセージ盛り合わせ", price: 1000 },
+        { name: "7種のチーズドリア", price: 1200 },
+        { name: "オムライス（落書き付き）", price: 1500 },
+        { name: "フード持ち込み", price: 1500 },
+      ],
+      "ショット": [
+        { name: "イエガー", price: 500 },
+        { name: "テキーラ", price: 500 },
+        { name: "テキーラロゼ", price: 500 },
+        { name: "コカレロ", price: 800 },
+        { name: "CBDショット", price: 500 },
+        { name: "クライナー", price: 800 },
+        { name: "コカボム", price: 1000 },
+        { name: "キャストショット", price: 1500 },
       ],
       "シャンパン": [
-        { name: "バニラアイス", price: 600 },
-        { name: "ガトーショコラ", price: 900 },
+        { name: "リステル", price: 10000 },
+        { name: "カフェドパリ", price: 10000 },
+        { name: "カフェドパリ ルージュ", price: 15000 },
+        { name: "アスティ", price: 12000 },
+        { name: "マパム", price: 20000 },
+        { name: "オリシャン", price: 25000 },
+        { name: "モエ白", price: 25000 },
+        { name: "モエ アイアンペリアル", price: 45000 },
+        { name: "モエ ネクターロゼ", price: 55000 },
+        { name: "ヴーブイエロー", price: 30000 },
+        { name: "ヴーブホワイト", price: 35000 },
+        { name: "ヴーヴ リッチロゼ", price: 50000 },
+        { name: "ドンペリ", price: 80000 },
+        { name: "エンジェル黒", price: 150000 },
+        { name: "エンジェル白", price: 200000 },
+        { name: "エンジェル ヘイロー", price: 230000 },
+        { name: "エンジェル ドミュセック", price: 300000 },
+      ],
+      "ノンアルシャンパン": [
+        { name: "シャンメリー白", price: 3000 },
+        { name: "シャンメリーロゼ", price: 5000 },
+        { name: "ピュアボム", price: 10000 },
+        { name: "シャメイ", price: 15000 },
+      ],
+      "その他": [
+        { name: "レッドブルウォッカ", price: 500 },
+        { name: "瓶ビール", price: 1000 },
+        { name: "テキーラ観覧車", price: 20000 },
+        { name: "シンデレラシュー", price: 20000 },
+        { name: "フィリコ", price: 130000 },
       ]
     };
 
