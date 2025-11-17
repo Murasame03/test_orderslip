@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>伝票計算ツール</title>
+  <title>Bar伝票アプリ</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -54,10 +54,15 @@
         <input id="startTime" type="time"
           class="w-32 border border-cyan-600 rounded bg-black text-cyan-100 p-1" />
       </div>
-      <div class="flex justify-between items-center">
+      <div class="flex justify-between items-center mb-2">
         <label class="text-sm">終了時間</label>
         <input id="endTime" type="time"
           class="w-32 border border-cyan-600 rounded bg-black text-cyan-100 p-1" />
+      </div>
+      <!-- ★ 初回セット半額チェックボックス（UIレイアウト内に追加） -->
+      <div class="flex items-center mt-1">
+        <input id="halfFirstSet" type="checkbox" class="mr-2">
+        <label for="halfFirstSet" class="text-sm text-cyan-200">初回セットの料金を半額にする</label>
       </div>
     </div>
 
@@ -70,7 +75,7 @@
     <!-- 明細 -->
     <div class="border border-cyan-600/60 rounded-lg p-3 bg-black/50">
       <h2 class="font-semibold text-lg text-cyan-300 mb-2">明細</h2>
-      <div id="summary" class="text-sm text-cyan-100 max-h-48 overflow-y-auto">
+      <div id="summary" class="text-sm text-cyan-100 max-h-100 overflow-y-auto">
         まだ入力がありません
       </div>
     </div>
@@ -162,6 +167,7 @@
       ]
     };
 
+
     const menuContainer = document.getElementById("menuContainer");
     const summaryDiv = document.getElementById("summary");
 
@@ -215,6 +221,7 @@
       const rows = [];
       let subtotal = 0;
 
+      // 単品小計
       for (const [category, items] of Object.entries(menuData)) {
         items.forEach((item, idx) => {
           const qty = parseInt(document.getElementById(`qty-${category}-${idx}`).value);
@@ -230,15 +237,27 @@
       const base = parseInt(document.getElementById("chargeBase").value || 3000);
       const start = document.getElementById("startTime").value;
       const end = document.getElementById("endTime").value;
+      let firstSetDiscount = 0;
+
       if (start && end) {
         const [sh, sm] = start.split(":").map(Number);
         const [eh, em] = end.split(":").map(Number);
         let minutes = (eh * 60 + em) - (sh * 60 + sm);
         if (minutes < 0) minutes += 24 * 60;
         const sets = Math.ceil(minutes / 40);
-        const chargeTotal = sets * base;
-        subtotal += chargeTotal;
-        rows.push(`チャージ料 ${base}円 × ${sets}セット = ${chargeTotal}円`);
+        if (sets > 0) {
+          const chargeTotal = sets * base;
+          subtotal += chargeTotal;
+          rows.push(`チャージ料 ${base}円 × ${sets}セット = ${chargeTotal}円`);
+
+          // ★ 初回セット半額割引
+          const halfFirstSetChecked = document.getElementById("halfFirstSet").checked;
+          if (halfFirstSetChecked) {
+            firstSetDiscount = Math.round(base / 2); // セット1回分の半額
+            subtotal -= firstSetDiscount;
+            rows.push(`初回セット半額 -${firstSetDiscount}円`);
+          }
+        }
       }
 
       const tax = Math.round(subtotal * TAX_RATE);
@@ -251,13 +270,20 @@
       summaryDiv.innerHTML = rows.length ? rows.join("<br>") : "まだ入力がありません";
     }
 
-    document.querySelectorAll("input").forEach(i => i.addEventListener("input", updateSummary));
+    document.querySelectorAll("input").forEach(i => {
+      // time/number/fileName/checkbox 全部まとめて再計算
+      if (i.id !== "fileName") {
+        i.addEventListener("input", updateSummary);
+        i.addEventListener("change", updateSummary);
+      }
+    });
 
     // CSV出力機能
     document.getElementById("downloadCsv").addEventListener("click", () => {
       const rows = [["品名", "単価", "数量", "小計"]];
       let subtotal = 0;
 
+      // 単品
       for (const [category, items] of Object.entries(menuData)) {
         items.forEach((item, idx) => {
           const qty = parseInt(document.getElementById(`qty-${category}-${idx}`).value);
@@ -269,18 +295,30 @@
         });
       }
 
+      // チャージ + 初回セット半額
       const base = parseInt(document.getElementById("chargeBase").value || 3000);
       const start = document.getElementById("startTime").value;
       const end = document.getElementById("endTime").value;
+      let firstSetDiscount = 0;
+
       if (start && end) {
         const [sh, sm] = start.split(":").map(Number);
         const [eh, em] = end.split(":").map(Number);
         let minutes = (eh * 60 + em) - (sh * 60 + sm);
         if (minutes < 0) minutes += 24 * 60;
         const sets = Math.ceil(minutes / 40);
-        const chargeTotal = sets * base;
-        subtotal += chargeTotal;
-        rows.push(["チャージ料", base, sets, chargeTotal]);
+        if (sets > 0) {
+          const chargeTotal = sets * base;
+          subtotal += chargeTotal;
+          rows.push(["チャージ料", base, sets, chargeTotal]);
+
+          const halfFirstSetChecked = document.getElementById("halfFirstSet").checked;
+          if (halfFirstSetChecked) {
+            firstSetDiscount = Math.round(base / 2);
+            subtotal -= firstSetDiscount;
+            rows.push(["初回セット半額", "", "", -firstSetDiscount]);
+          }
+        }
       }
 
       const tax = Math.round(subtotal * TAX_RATE);
@@ -295,10 +333,8 @@
 
       const baseName = document.getElementById("fileName").value.trim() || "denpyo";
       const now = new Date();
-      const yy = String(now.getFullYear()).slice(-2);
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const dd = String(now.getDate()).padStart(2, "0");
-      const filename = `${yy}${mm}${dd}_${baseName}.csv`;
+      const timestamp = now.toLocaleString("ja-JP").replace(/[\/: ]/g, "_");
+      const filename = `${baseName}_${timestamp}.csv`;
 
       const a = document.createElement("a");
       a.href = url;
